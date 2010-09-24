@@ -6,13 +6,14 @@ use warnings;
 use Mojo::ByteStream 'b';
 use base 'Mojolicious::Plugin';
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 __PACKAGE__->attr(url => sub { +{
 	twitter   => 'http://twitter.com/share',
 	facebook  => 'http://facebook.com/sharer.php',
 	buzz      => 'http://www.google.com/buzz/post',
 	vkontakte => 'http://vkontakte.ru/share.php',
+	mymailru  => 'http://connect.mail.ru/share',
 } });
 
 sub register {
@@ -48,9 +49,13 @@ sub share_url {
 	elsif ($type eq 'vkontakte') {
 		$param->{url} = $args->{url};
 	}
+	elsif ($type eq 'mymailru') {
+		$param->{share_url} = $args->{url};
+	}
 	
+	my @p = grep { $param->{$_} } sort keys %$param;
 	return join '?', $self->url->{ $type },
-		join '&', map { $_ . '=' . b( $param->{$_} )->url_escape } grep { $param->{$_} } sort keys %$param
+		@p ? join '&', map { $_ . '=' . b( $param->{$_} )->url_escape } @p : ()
 	;
 }
 
@@ -124,6 +129,18 @@ sub share_button {
 			qq(<script type="text/javascript">document.write(VK.Share.button($url, {$param}));</script>)
 		;
 	}
+	elsif ($type eq 'mymailru') {
+		use utf8;
+		my $url = $c->helper(share_url => $type, @_ );
+		
+		$args->{type } ||= '';
+		$args->{title} ||= 'В Мой Мир';
+		
+		$button =
+			qq(<script src="http://cdn.connect.mail.ru/js/share/2/share.js" type="text/javascript"></script>) .
+			qq(<a class="mrc__share" type="$args->{type}" href="$url">$args->{title}</a>)
+		;
+	}
 	
 	return b( $button );
 }
@@ -166,7 +183,7 @@ __END__
 
 =head1 NAME
 
-Mojolicious::Plugin::ShareHelpers - Mojolicious Plugin for generate share url, button and meta (Twitter, Facebook, Buzz, VKontakte)
+Mojolicious::Plugin::ShareHelpers - Mojolicious Plugin for generate share url, button and meta (Twitter, Facebook, Buzz, VKontakte, MyMailRU)
 
 =head1 SYNOPSIS
 
@@ -181,12 +198,14 @@ Mojolicious::Plugin::ShareHelpers - Mojolicious Plugin for generate share url, b
   <a href="<%= share_url 'facebook',  url => $url, text => $text %>">Share to Facebook</a>
   <a href="<%= share_url 'buzz',      url => $url, text => $text, image => $image %>">Share to Google Buzz</a>
   <a href="<%= share_url 'vkontakte', url => $url %>">Share to ВКонтакте</a>
+  <a href="<%= share_url 'mymailru',    url => $url %>">Share to Мой Мир</a>
 
   # share buttons:
   %= share_button 'twitter',   url => 'http://mojolicio.us', text => 'Viva la revolution!', via => 'sharifulin';
   %= share_button 'facebook',  url => 'http://mojolicio.us', type => 'button_count', title => 'Share it';
   %= share_button 'buzz',      url => 'http://mojolicio.us', text => 'Viva la revolution', image => 'http://mojolicious.org/webinabox.png', type => 'normal-count', title => 'Share it';
   %= share_button 'vkontakte', url => 'http://mojolicio.us', type => 'round', title => 'Save';
+  %= share_button 'mymailru',  url => 'http://mojolicio.us', type => 'button_count', title => 'Share to Мой Мир';
 
   # generate meta for share
   %= share_meta title => 'Mojolicious', description => 'Viva la revolition!', url => 'http://mojolicio.us', image => 'http://mojolicious.org/webinabox.png'
@@ -206,6 +225,8 @@ Facebook Share L<http://developers.facebook.com/docs/share>
 Google Buzz Share L<http://www.google.com/buzz/api/admin/configPostWidget>
 
 VKontakte Share L<http://vkontakte.ru/pages.php?act=share>
+
+My.MailRU Share L<http://api.mail.ru/sites/plugins/share/extended/>
 
 =head2 HELPERS
 
