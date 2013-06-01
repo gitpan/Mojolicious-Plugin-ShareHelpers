@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-use lib qw(lib /tk/lib /tk/mojo/lib);
+use lib qw(lib ../mojo/lib);
 
 BEGIN { $ENV{MOJO_NO_BONJOUR}++ };
 use Mojolicious::Lite;
@@ -10,14 +10,14 @@ plugin 'share_helpers';
 
 get '/'    => 'index';
 get '/bad' => 'bad';
-get "/$_"  => $_ for qw(twitter facebook buzz vkontakte mymailru google+ google+all meta);
+get "/$_"  => $_ for qw(twitter facebook vkontakte mymailru google+ google+all meta);
 
 get '/ua'  => sub {
 	my $self = shift;
 	$self->render('ua', check => $self->is_share_agent);
 };
 
-use Test::More tests => 41;
+use Test::More;
 use Test::Mojo;
 
 my $t = Test::Mojo->new;
@@ -45,21 +45,12 @@ $t->get_ok('/facebook')
 	''
 );
 
-$t->get_ok('/buzz')
-  ->status_is(200)
-  ->content_is(join "\n",
-	q(http://www.google.com/buzz/post?imageurl=http%3A%2F%2Fmojolicious.org%2Fwebinabox.png&message=Viva%20la%20revolution%21&url=http%3A%2F%2Fmojolicio.us),
-	q(<a title="Share it" class="google-buzz-button" href="http://www.google.com/buzz/post" data-imageurl="http://mojolicious.org/webinabox.png" data-url="http://mojolicio.us" data-button-style="normal-count" data-message="Viva la revolution!"></a><script type="text/javascript" src="http://www.google.com/buzz/api/button.js"></script>),
-	q(<a title="Share to Google Buzz" class="google-buzz-button" href="http://www.google.com/buzz/post" data-url="http://mojolicio.us" data-locale="ru" data-button-style="link"></a><script type="text/javascript" src="http://www.google.com/buzz/api/button.js"></script>),
-	''
-);
-
 $t->get_ok('/vkontakte')
   ->status_is(200)
   ->content_is(join "\n",
-	q(http://vkontakte.ru/share.php?url=http%3A%2F%2Fmojolicio.us),
-	q(<script type="text/javascript" src="http://vkontakte.ru/js/api/share.js?9" charset="windows-1251"></script><script type="text/javascript">document.write(VK.Share.button({url: "http://mojolicio.us"}, {text: "Save", type: "round"}));</script>),
-	q(<script type="text/javascript" src="http://vkontakte.ru/js/api/share.js?9" charset="windows-1251"></script><script type="text/javascript">document.write(VK.Share.button(false, {text: "Save", type: "custom"}));</script>),
+	q(http://vk.com/share.php?url=http%3A%2F%2Fmojolicio.us),
+	q(<script type="text/javascript" src="http://vk.com/js/api/share.js?146" charset="windows-1251"></script><script type="text/javascript">document.write(VK.Share.button({url: "http://mojolicio.us"}, {text: "Save", type: "round"}));</script>),
+	q(<script type="text/javascript" src="http://vk.com/js/api/share.js?146" charset="windows-1251"></script><script type="text/javascript">document.write(VK.Share.button(false, {text: "Save", type: "custom"}));</script>),
 	''
 );
 
@@ -141,15 +132,12 @@ $t->get_ok('/ua', {'User-Agent' => 'facebookexternalhit', 'Range' => 1, 'Accept-
   ->content_is("facebook\n", 'Facebook share agent')
 ;
 
-$t->get_ok('/ua', {'User-Agent' => 'Mozilla', 'Accept-Encoding' => 'gzip'})
-  ->status_is(200)
-  ->content_is("buzz\n", 'Google Buzz share agent')
-;
-
 $t->get_ok('/ua', {'User-Agent' => 'Mozilla', 'Range' => 1, 'Accept-Encoding' => 'gzip, deflate'})
   ->status_is(200)
   ->content_is("vkontakte\n", 'VKontakte share agent')
 ;
+
+done_testing;
 
 __DATA__
 
@@ -172,12 +160,6 @@ __DATA__
 %== share_url    'facebook', url => 'http://mojolicio.us', text => 'Viva la revolution!';
 %== share_button 'facebook', url => 'http://mojolicio.us', type => 'button_count', title => 'Share it';
 %== share_button 'facebook', url => 'http://mojolicio.us', type => 'icon', fb => 1;
-
-@@ buzz.html.ep
-
-%== share_url    'buzz', url => 'http://mojolicio.us', text => 'Viva la revolution!', image => 'http://mojolicious.org/webinabox.png';
-%== share_button 'buzz', url => 'http://mojolicio.us', text => 'Viva la revolution!', image => 'http://mojolicious.org/webinabox.png', type => 'normal-count', title => 'Share it';
-%== share_button 'buzz', url => 'http://mojolicio.us', type => 'link', lang => 'ru';
 
 @@ vkontakte.html.ep
 
@@ -217,7 +199,7 @@ __DATA__
 
 %== include 'meta'
 
-% for (qw(twitter facebook buzz vkontakte mymailru)) {
+% for (qw(twitter facebook vkontakte mymailru)) {
 <p>
 	%== include $_
 </p>
